@@ -56,7 +56,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with sessionmanager._engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Start Telegram Bot polling in background
+    bot_task = None
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("BOT_TOKEN")
+    if bot_token:
+        try:
+            from app.bot.bot import start_bot
+            bot_task = asyncio.create_task(start_bot())
+            logger.info("telegram_bot_background_task_created")
+        except Exception as e:
+            logger.error("telegram_bot_failed_to_start", error=str(e))
+
     yield
+
+    if bot_task:
+        bot_task.cancel()
+        try:
+            await bot_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
     await sessionmanager.close()
     logger.info("application_stopping")

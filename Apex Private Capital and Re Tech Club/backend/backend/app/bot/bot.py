@@ -1,30 +1,16 @@
-"""APEX ASSET SUITE — ADIPEC Concierge Bot (Ясмина)
-=====================================================
-Гибридная система: Telegram Bot + Telegram WebApp (TWA)
+"""APEX ASSET SUITE — ADIPEC Concierge Bot.
 
-Архитектура:
-  /start → Приветствие бота «Ясмина» (KYC-комплаенс)
-    ├── KYC-скрининг:
-    │     1. Сбор ФИО + сфера деятельности
-    │     2. Финансовый фильтр ($100,000 ликвидный капитал)
-    │     3. Мультивыбор инвест-предпочтений
-    │     4. Финализация → комплаенс-проверка
-    │
-    ├── Контур А (Гостевой) — до прохождения KYC
-    ├── Контур Б (Резидент)  — после KYC
-    └── Контур Г (VIP КМГ)   — авторизация по @kmg.kz
-
-  WebApp → Открывает TWA (Расписание / Нетворкинг / Консьерж / Оффер)
+Hybrid system: Telegram Bot + Telegram WebApp (TWA).
 """
 
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 import logging
 import os
 import re
 import sys
-from datetime import datetime
 from typing import Any
 
 from aiogram import Bot, Dispatcher, F, Router, types
@@ -45,31 +31,29 @@ from aiogram.types import (
     WebAppInfo,
 )
 
-# Google Sheets (legacy — в будущем заменяется на Backend API)
 import gspread
 from google.oauth2.service_account import Credentials
 
-# dotenv для загрузки .env
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass  # dotenv опционален
+logger = logging.getLogger(__name__)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 1.  КОНФИГУРАЦИЯ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
-if not BOT_TOKEN:
-    print("❌ ОШИБКА: BOT_TOKEN не задан. Создайте .env файл или задайте переменную окружения.")
-    sys.exit(1)
+def get_bot_token() -> str:
+    return os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("BOT_TOKEN", "")
 
-WEBAPP_URL: str = os.getenv("WEBAPP_URL", "https://your-domain.com")
-SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "@appex_support")
+def get_webapp_url() -> str:
+    return os.getenv("WEBAPP_URL", "https://appex-adipec-concierge.vercel.app")
+
+def get_support_username() -> str:
+    return os.getenv("SUPPORT_USERNAME", "@appex_support")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CREDENTIALS_FILE = os.path.join(BASE_DIR, os.getenv("CREDENTIALS_FILE", "credentials.json"))
+CREDENTIALS_FILE = os.getenv("CREDENTIALS_FILE", "credentials.json")
+if not os.path.isabs(CREDENTIALS_FILE):
+    CREDENTIALS_FILE = os.path.join(BASE_DIR, CREDENTIALS_FILE)
+
 SPREADSHEET_ID: str = os.getenv("SPREADSHEET_ID", "1szL5sNAQMN0c90kb9j8Z8Qiw3mZ6Kpmj3EaYsErO8Lw")
 
 SHEET_RESIDENTS = "Резиденты"
@@ -82,10 +66,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Минимальный порог капитала для входа в клуб (USD)
 MIN_CAPITAL_THRESHOLD = 100_000
 
-# Стоп-слова для автоматического скрининга
 STOP_WORDS = {
     "студент", "student", "безработн", "без работы", "не работаю",
     "школьник", "пенсионер", "мошенник", "спам", "spam",
@@ -97,7 +79,7 @@ STOP_WORDS = {
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 TEXTS: dict[str, str] = {
-    # ── Приветствие Ясмины ──
+    # ── Приветствие ──
     "welcome": (
         "🏛 <b>Добро пожаловать в APEX ASSET SUITE.</b>\n\n"
         "Я — ваш <b>цифровой консьерж</b> и ассистент по инвестициям.\n\n"
@@ -106,7 +88,7 @@ TEXTS: dict[str, str] = {
         "<i>Нажмите кнопку ниже для начала.</i>"
     ),
 
-    # ── KYC Ясмины (пошагово) ──
+    # ── KYC (пошагово) ──
     "kyc_fio": (
         "📋 <b>Шаг 1 из 4 — Идентификация</b>\n\n"
         "Пожалуйста, укажите ваше <b>ФИО</b> и <b>сферу деятельности</b>.\n\n"
@@ -121,7 +103,7 @@ TEXTS: dict[str, str] = {
     "kyc_capital_reject": (
         "🚫 <b>Благодарим за интерес.</b>\n\n"
         "На данном этапе пул закрыт для розничных инвесторов.\n\n"
-        f"По вопросам: {SUPPORT_USERNAME}"
+        f"По вопросам: {get_support_username()}"
     ),
     "kyc_preferences": (
         "🎯 <b>Шаг 3 из 4 — Инвестиционные предпочтения</b>\n\n"
@@ -137,10 +119,10 @@ TEXTS: dict[str, str] = {
         "📋 <b>Заявка принята на рассмотрение.</b>\n\n"
         "Ваша анкета будет изучена нашей командой. "
         "Мы свяжемся с вами в течение 5 рабочих дней.\n\n"
-        f"По срочным вопросам: {SUPPORT_USERNAME}"
+        f"По срочным вопросам: {get_support_username()}"
     ),
 
-    # ── Авторизация (legacy) ──
+    # ── Авторизация ──
     "auth_check": (
         "🔐 <b>Верификация членства</b>\n\n"
         "Для проверки вашего статуса в реестре резидентов, "
@@ -173,7 +155,7 @@ TEXTS: dict[str, str] = {
     # ── Служба поддержки ──
     "support": (
         f"📞 <b>Служба заботы о клиентах</b>\n\n"
-        f"Для связи с менеджером: {SUPPORT_USERNAME}\n\n"
+        f"Для связи с менеджером: {get_support_username()}\n\n"
         "Мы доступны с 10:00 до 20:00 (UTC+4, Abu Dhabi)."
     ),
 
@@ -182,24 +164,20 @@ TEXTS: dict[str, str] = {
     "cancelled": "❌ Действие отменено. Возвращаемся в главное меню…",
 }
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 3.  ЛОГИРОВАНИЕ
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  [%(levelname)s]  %(name)s — %(message)s",
-    stream=sys.stdout,
-)
-logger = logging.getLogger(__name__)
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 4.  GOOGLE SHEETS — ASYNC WRAPPER
+# 3.  GOOGLE SHEETS — ASYNC WRAPPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def _get_gspread_client() -> gspread.Client:
-    creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-    return gspread.authorize(creds)
+def _get_gspread_client() -> gspread.Client | None:
+    if not os.path.exists(CREDENTIALS_FILE):
+        return None
+    try:
+        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+        return gspread.authorize(creds)
+    except Exception as e:
+        logger.warning(f"Google Sheets auth failed: {e}")
+        return None
 
 
 def _normalize_phone(raw: str) -> str:
@@ -215,6 +193,8 @@ async def sheets_lookup_phone(phone: str) -> dict | None:
 
     def _lookup():
         client = _get_gspread_client()
+        if not client:
+            return None
         ws = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_RESIDENTS)
         records = ws.get_all_records()
         for row in records:
@@ -233,6 +213,8 @@ async def sheets_lookup_phone(phone: str) -> dict | None:
 async def sheets_append(sheet_name: str, row: list) -> None:
     def _append():
         client = _get_gspread_client()
+        if not client:
+            return
         ws = client.open_by_key(SPREADSHEET_ID).worksheet(sheet_name)
         ws.append_row(row)
 
@@ -244,23 +226,23 @@ async def sheets_append(sheet_name: str, row: list) -> None:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 5.  FSM СОСТОЯНИЯ
+# 4.  FSM СОСТОЯНИЯ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class KycFSM(StatesGroup):
-    """KYC-скрининг «Ясмина»"""
-    fio_and_business = State()  # Шаг 1: ФИО + сфера
-    capital_check    = State()  # Шаг 2: Финансовый ценз
-    preferences      = State()  # Шаг 3: Инвест-предпочтения
+    """KYC-скрининг"""
+    fio_and_business = State()
+    capital_check    = State()
+    preferences      = State()
 
 
 class AuthFSM(StatesGroup):
-    """Legacy-авторизация по контакту"""
+    """Авторизация по контакту"""
     waiting_contact = State()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 6.  КЛАВИАТУРЫ
+# 5.  КЛАВИАТУРЫ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def _inline(*rows: tuple[str, str]) -> InlineKeyboardMarkup:
@@ -272,7 +254,6 @@ def _inline(*rows: tuple[str, str]) -> InlineKeyboardMarkup:
 
 
 def _welcome_kb() -> InlineKeyboardMarkup:
-    """Главное приветственное меню Ясмины"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Подать заявку на вступление", callback_data="kyc_start")],
         [InlineKeyboardButton(text="🔐 У меня уже есть членство", callback_data="auth_start")],
@@ -281,7 +262,6 @@ def _welcome_kb() -> InlineKeyboardMarkup:
 
 
 def _capital_kb() -> InlineKeyboardMarkup:
-    """Клавиатура финансового ценза"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"✅ Да, мой капитал > ${MIN_CAPITAL_THRESHOLD:,}",
@@ -295,7 +275,6 @@ def _capital_kb() -> InlineKeyboardMarkup:
 
 
 def _preferences_kb() -> InlineKeyboardMarkup:
-    """Мультивыбор инвест-предпочтений"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏎 Спорткары Porsche / Maserati", callback_data="pref_cars")],
         [InlineKeyboardButton(text="🏠 Недвижимость ОАЭ (офплан)", callback_data="pref_realestate")],
@@ -305,11 +284,11 @@ def _preferences_kb() -> InlineKeyboardMarkup:
 
 
 def _main_menu_kb() -> InlineKeyboardMarkup:
-    """Главное меню после авторизации / KYC"""
+    webapp_url = get_webapp_url()
     buttons = [
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=WEBAPP_URL),
+            web_app=WebAppInfo(url=webapp_url),
         )],
         [InlineKeyboardButton(text="📞 Служба заботы", callback_data="contact_support")],
     ]
@@ -325,11 +304,11 @@ def _auth_kb() -> ReplyKeyboardMarkup:
 
 
 def _post_kyc_kb() -> InlineKeyboardMarkup:
-    """Меню после завершения KYC"""
+    webapp_url = get_webapp_url()
     buttons = [
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=WEBAPP_URL),
+            web_app=WebAppInfo(url=webapp_url),
         )],
         [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="contact_support")],
     ]
@@ -337,19 +316,17 @@ def _post_kyc_kb() -> InlineKeyboardMarkup:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 7.  РОУТЕР И ОБРАБОТЧИКИ
+# 6.  РОУТЕР И ОБРАБОТЧИКИ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-router = Router(name="main")
+router = Router(name="bot_main")
 
-
-# ──── /start ────
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(TEXTS["welcome"], reply_markup=_welcome_kb())
-    logger.info("User %s started the bot.", message.from_user.id)
+    logger.info("User %s started the bot.", message.from_user.id if message.from_user else "unknown")
 
 
 @router.message(Command("cancel"))
@@ -366,30 +343,29 @@ async def cmd_menu(message: Message) -> None:
 
 @router.message(Command("webapp"))
 async def cmd_webapp(message: Message) -> None:
-    """Прямой доступ к WebApp через команду"""
+    webapp_url = get_webapp_url()
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=WEBAPP_URL),
+            web_app=WebAppInfo(url=webapp_url),
         )],
     ])
     await message.answer("Нажмите кнопку ниже для запуска приложения:", reply_markup=kb)
 
 
-# ──── KYC «Ясмина» ────
+# ──── KYC ────
 
 @router.callback_query(F.data == "kyc_start")
 async def kyc_start(callback: CallbackQuery, state: FSMContext) -> None:
-    """Шаг 1: запрос ФИО и сферы деятельности"""
     await state.clear()
     await state.set_state(KycFSM.fio_and_business)
-    await callback.message.answer(TEXTS["kyc_fio"])
+    if callback.message:
+        await callback.message.answer(TEXTS["kyc_fio"])
     await callback.answer()
 
 
 @router.message(KycFSM.fio_and_business, F.text)
 async def kyc_fio_received(message: Message, state: FSMContext) -> None:
-    """Получили ФИО + сферу → переходим к финансовому цензу"""
     await state.update_data(fio_and_business=message.text)
     await state.set_state(KycFSM.capital_check)
     await message.answer(TEXTS["kyc_capital"], reply_markup=_capital_kb())
@@ -397,39 +373,38 @@ async def kyc_fio_received(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(KycFSM.capital_check, F.data == "capital_yes")
 async def kyc_capital_confirmed(callback: CallbackQuery, state: FSMContext) -> None:
-    """Капитал подтверждён → инвест-предпочтения"""
     await state.update_data(capital_confirmed=True)
     await state.set_state(KycFSM.preferences)
-    await callback.message.edit_text(
-        f"✅ Финансовый ценз подтверждён (> ${MIN_CAPITAL_THRESHOLD:,})"
-    )
-    await callback.message.answer(TEXTS["kyc_preferences"], reply_markup=_preferences_kb())
+    if callback.message and isinstance(callback.message, types.Message):
+        await callback.message.edit_text(
+            f"✅ Финансовый ценз подтверждён (> ${MIN_CAPITAL_THRESHOLD:,})"
+        )
+        await callback.message.answer(TEXTS["kyc_preferences"], reply_markup=_preferences_kb())
     await callback.answer()
 
 
 @router.callback_query(KycFSM.capital_check, F.data == "capital_no")
 async def kyc_capital_rejected(callback: CallbackQuery, state: FSMContext) -> None:
-    """Жёсткий барьер: капитал < $100,000 — немедленное завершение"""
     await state.clear()
-    await callback.message.edit_text(TEXTS["kyc_capital_reject"])
+    if callback.message and isinstance(callback.message, types.Message):
+        await callback.message.edit_text(TEXTS["kyc_capital_reject"])
     await callback.answer()
-    logger.info("KYC REJECTED (capital): user=%s", callback.from_user.id)
+    logger.info("KYC REJECTED (capital): user=%s", callback.from_user.id if callback.from_user else "unknown")
 
 
 @router.callback_query(KycFSM.preferences, F.data.startswith("pref_"))
 async def kyc_preferences_chosen(callback: CallbackQuery, state: FSMContext) -> None:
-    """Шаг 3: инвест-предпочтения выбраны → финализация"""
     pref_map = {
         "pref_cars": "Спорткары (Porsche/Maserati)",
         "pref_realestate": "Недвижимость ОАЭ",
         "pref_p2p": "P2P выход (вторичный рынок)",
         "pref_all": "Все направления",
     }
-    preference = pref_map.get(callback.data, callback.data)
+    pref_key = callback.data or ""
+    preference = pref_map.get(pref_key, pref_key)
     await state.update_data(preference=preference)
     data = await state.get_data()
 
-    # Объединяем все ответы для скрининга
     combined = " ".join([
         data.get("fio_and_business", ""),
         preference,
@@ -437,49 +412,51 @@ async def kyc_preferences_chosen(callback: CallbackQuery, state: FSMContext) -> 
 
     has_stop_word = any(word in combined for word in STOP_WORDS)
 
-    # Формируем запись
+    user_id = str(callback.from_user.id) if callback.from_user else ""
+    username = callback.from_user.username or "" if callback.from_user else ""
+
     row_data = [
-        str(callback.from_user.id),
-        callback.from_user.username or "",
+        user_id,
+        username,
         data.get("fio_and_business", ""),
         f"Капитал > ${MIN_CAPITAL_THRESHOLD:,}",
         preference,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     ]
 
-    if has_stop_word:
-        await sheets_append(SHEET_WAITLIST, row_data + ["⚠️ Стоп-слово (автоскрининг)"])
-        await state.clear()
-        await callback.message.edit_text(TEXTS["kyc_flagged"])
-        logger.info("KYC FLAGGED: user=%s", callback.from_user.id)
-    else:
-        await sheets_append(SHEET_APPROVED, row_data + ["✅ Автоскрининг пройден"])
-        await state.clear()
-        await callback.message.edit_text(
-            f"🎯 Выбрано направление: <b>{preference}</b>"
-        )
-        await callback.message.answer(TEXTS["kyc_finalize"], reply_markup=_post_kyc_kb())
-        logger.info(
-            "KYC PASSED: user=%s fio=%s pref=%s",
-            callback.from_user.id, data.get("fio_and_business"), preference,
-        )
+    if callback.message and isinstance(callback.message, types.Message):
+        if has_stop_word:
+            await sheets_append(SHEET_WAITLIST, row_data + ["⚠️ Стоп-слово (автоскрининг)"])
+            await state.clear()
+            await callback.message.edit_text(TEXTS["kyc_flagged"])
+            logger.info("KYC FLAGGED: user=%s", user_id)
+        else:
+            await sheets_append(SHEET_APPROVED, row_data + ["✅ Автоскрининг пройден"])
+            await state.clear()
+            await callback.message.edit_text(
+                f"🎯 Выбрано направление: <b>{preference}</b>"
+            )
+            await callback.message.answer(TEXTS["kyc_finalize"], reply_markup=_post_kyc_kb())
+            logger.info("KYC PASSED: user=%s fio=%s pref=%s", user_id, data.get("fio_and_business"), preference)
 
     await callback.answer()
 
 
-# ──── Legacy-авторизация (Контакт) ────
+# ──── Авторизация (Контакт) ────
 
 @router.callback_query(F.data == "auth_start")
 async def auth_start(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(AuthFSM.waiting_contact)
-    await callback.message.answer(TEXTS["auth_check"], reply_markup=_auth_kb())
+    if callback.message:
+        await callback.message.answer(TEXTS["auth_check"], reply_markup=_auth_kb())
     await callback.answer()
 
 
 @router.message(AuthFSM.waiting_contact, F.contact)
 async def auth_contact_received(message: Message, state: FSMContext) -> None:
-    """Получаем контакт, ищем в Google Sheets."""
+    if not message.contact:
+        return
     phone = message.contact.phone_number
     await message.answer("🔍 Проверяю данные…", reply_markup=ReplyKeyboardRemove())
 
@@ -495,11 +472,11 @@ async def auth_contact_received(message: Message, state: FSMContext) -> None:
             ),
             reply_markup=_main_menu_kb(),
         )
-        logger.info("Auth SUCCESS: user=%s", message.from_user.id)
+        logger.info("Auth SUCCESS: user=%s", message.from_user.id if message.from_user else "")
     else:
         await state.clear()
         await message.answer(TEXTS["auth_fail"], reply_markup=_welcome_kb())
-        logger.info("Auth FAIL: user=%s phone=%s", message.from_user.id, phone)
+        logger.info("Auth FAIL: user=%s phone=%s", message.from_user.id if message.from_user else "", phone)
 
 
 @router.message(AuthFSM.waiting_contact, ~F.contact)
@@ -512,18 +489,18 @@ async def auth_text_instead_of_contact(message: Message) -> None:
 @router.callback_query(F.data == "contact_support")
 async def contact_support_callback(callback: CallbackQuery) -> None:
     kb = _inline(("⬅️ В начало", "go_start"))
-    await callback.message.answer(TEXTS["support"], reply_markup=kb)
+    if callback.message:
+        await callback.message.answer(TEXTS["support"], reply_markup=kb)
     await callback.answer()
 
 
 @router.callback_query(F.data == "go_start")
 async def go_start_callback(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.answer(TEXTS["welcome"], reply_markup=_welcome_kb())
+    if callback.message:
+        await callback.message.answer(TEXTS["welcome"], reply_markup=_welcome_kb())
     await callback.answer()
 
-
-# ──── Fallback ────
 
 @router.callback_query()
 async def unmatched_callback(callback: CallbackQuery) -> None:
@@ -545,20 +522,28 @@ async def general_fallback(message: Message, state: FSMContext) -> None:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 8.  ТОЧКА ВХОДА
+# 7.  ТОЧКА ЗАПУСКА В FASTAPI LIFESPAN
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+async def start_bot() -> None:
+    token = get_bot_token()
+    if not token:
+        logger.warning("TELEGRAM_BOT_TOKEN / BOT_TOKEN is empty. Telegram bot will not start.")
+        return
 
-async def main() -> None:
     bot = Bot(
-        token=BOT_TOKEN,
+        token=token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
     dp.include_router(router)
-    logger.info("🚀 APEX ASSET SUITE Bot (Ясмина) starting polling…")
-    await dp.start_polling(bot)
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    logger.info("🚀 APEX ASSET SUITE Telegram Bot starting polling...")
+    try:
+        await dp.start_polling(bot)
+    except asyncio.CancelledError:
+        logger.info("Telegram Bot polling stopped.")
+    except Exception as e:
+        logger.error(f"Telegram Bot encountered an error: {e}", exc_info=True)
+    finally:
+        await bot.session.close()
