@@ -21,6 +21,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 import os
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     
     # Initialize DB Connection
     db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/appex")
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    
+    # Render appends ?sslmode=require, asyncpg expects ?ssl=require or similar, but actually 
+    # asyncpg natively doesn't like sslmode. Let's just fix the prefix for now, and if there's 
+    # an issue, we can replace sslmode=require with ssl=require
+    if "sslmode=require" in db_url:
+        db_url = db_url.replace("sslmode=require", "ssl=require")
+        
     sessionmanager.init(db_url)
     
     # Create tables automatically for MVP deployment
