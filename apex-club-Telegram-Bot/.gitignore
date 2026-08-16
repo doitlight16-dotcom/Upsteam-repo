@@ -1,0 +1,7 @@
+*.docx
+*.pyc
+__pycache__/
+leads.db
+.DS_Store
+patch.py
+*.log

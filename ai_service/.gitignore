@@ -1,0 +1,32 @@
+﻿*.pyc
+.pytest_cache/
+.env
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# ChromaDB & Local Persistence
+chroma_db/
+*.sqlite3
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment variables
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+# Local Data Directory
+data/*
+!data/.gitkeep
+
+# Local Data Directory
+data/*
+!data/.gitkeep

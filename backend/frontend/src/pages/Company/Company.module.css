@@ -1,0 +1,97 @@
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-5) 0 var(--space-6);
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  object-fit: contain;
+  background: var(--glass-bg);
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--brand-glow);
+}
+
+.name {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--tg-hint-color);
+  margin: 0 0 var(--space-5);
+}
+
+.services {
+  margin-bottom: var(--space-6);
+  animation: fadeInUp 0.4s ease-out 0.1s both;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--brand-primary);
+  margin: 0 0 var(--space-3);
+}
+
+.serviceList {
+  margin: 0;
+  padding: 0;
+}
+
+.serviceItem {
+  list-style: none;
+  padding: var(--space-3) var(--space-4);
+  padding-left: calc(var(--space-4) + 14px);
+  position: relative;
+  font-size: 14px;
+  color: var(--tg-text-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+  transition: border-color 0.2s ease;
+}
+
+.serviceItem:hover {
+  border-color: rgba(212, 175, 55, 0.2);
+}
+
+.serviceItem::before {
+  content: '';
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-4);
+  animation: fadeInUp 0.4s ease-out 0.2s both;
+}
