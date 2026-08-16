@@ -65,7 +65,7 @@ if not BOT_TOKEN:
     print("❌ ОШИБКА: BOT_TOKEN не задан. Создайте .env файл или задайте переменную окружения.")
     sys.exit(1)
 
-WEBAPP_URL: str = os.getenv("WEBAPP_URL", "https://your-domain.com")
+WEBAPP_URL: str = os.getenv("WEBAPP_URL", "https://appex-adipec-concierge.vercel.app")
 SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "@appex_support")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
