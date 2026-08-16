@@ -165,16 +165,25 @@ TEXTS: dict[str, str] = {
 }
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 3.  GOOGLE SHEETS — ASYNC WRAPPER
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import json
 
 def _get_gspread_client() -> gspread.Client | None:
-    if not os.path.exists(CREDENTIALS_FILE):
-        return None
     try:
-        creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-        return gspread.authorize(creds)
+        json_env = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("CREDENTIALS_JSON")
+        if json_env:
+            try:
+                info = json.loads(json_env)
+                creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+                return gspread.authorize(creds)
+            except Exception as e:
+                logger.warning(f"Google Sheets auth from JSON env failed: {e}")
+
+        if os.path.exists(CREDENTIALS_FILE):
+            creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+            return gspread.authorize(creds)
+
+        logger.warning(f"Google Sheets credentials not found at {CREDENTIALS_FILE} and no GOOGLE_SERVICE_ACCOUNT_JSON env var.")
+        return None
     except Exception as e:
         logger.warning(f"Google Sheets auth failed: {e}")
         return None

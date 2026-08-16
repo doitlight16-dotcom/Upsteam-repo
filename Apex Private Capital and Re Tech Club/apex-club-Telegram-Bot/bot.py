@@ -197,9 +197,27 @@ logger = logging.getLogger(__name__)
 # 4.  GOOGLE SHEETS — ASYNC WRAPPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def _get_gspread_client() -> gspread.Client:
-    creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-    return gspread.authorize(creds)
+import json
+def _get_gspread_client() -> gspread.Client | None:
+    try:
+        json_env = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("CREDENTIALS_JSON")
+        if json_env:
+            try:
+                info = json.loads(json_env)
+                creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+                return gspread.authorize(creds)
+            except Exception as e:
+                logger.warning(f"Google Sheets auth from JSON env failed: {e}")
+
+        if os.path.exists(CREDENTIALS_FILE):
+            creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+            return gspread.authorize(creds)
+
+        logger.warning(f"Google Sheets credentials not found at {CREDENTIALS_FILE} and no GOOGLE_SERVICE_ACCOUNT_JSON env var.")
+        return None
+    except Exception as e:
+        logger.warning(f"Google Sheets auth failed: {e}")
+        return None
 
 
 def _normalize_phone(raw: str) -> str:
@@ -215,6 +233,8 @@ async def sheets_lookup_phone(phone: str) -> dict | None:
 
     def _lookup():
         client = _get_gspread_client()
+        if not client:
+            return None
         ws = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_RESIDENTS)
         records = ws.get_all_records()
         for row in records:
@@ -233,6 +253,8 @@ async def sheets_lookup_phone(phone: str) -> dict | None:
 async def sheets_append(sheet_name: str, row: list) -> None:
     def _append():
         client = _get_gspread_client()
+        if not client:
+            return
         ws = client.open_by_key(SPREADSHEET_ID).worksheet(sheet_name)
         ws.append_row(row)
 
