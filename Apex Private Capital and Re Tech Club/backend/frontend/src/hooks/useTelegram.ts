@@ -37,7 +37,11 @@ export function useTelegram(): UseTelegramResult {
     if (!webApp) return;
 
     webApp.ready();
-    webApp.expand();
+    try {
+      webApp.expand();
+    } catch (e) {
+      console.warn('Failed to expand webapp', e);
+    }
 
     const handleThemeChange = () => setColorScheme(webApp.colorScheme);
     webApp.onEvent('themeChanged', handleThemeChange);

@@ -9,10 +9,12 @@
     <title>Appex ADIPEC Concierge</title>
     <script>
       window.onerror = function(message, source, lineno, colno, error) {
-        document.body.innerHTML = '<div style="color:red;background:white;padding:20px;z-index:9999;position:relative;min-height:100vh;"><h3>Fatal JS Error:</h3><p>' + message + '</p><p>Line: ' + lineno + '</p></div>';
+        var el = document.body || document.documentElement;
+        el.innerHTML = '<div style="color:red;background:white;padding:20px;z-index:9999;position:relative;min-height:100vh;"><h3>Fatal JS Error:</h3><p>' + message + '</p><p>Line: ' + lineno + '</p></div>';
       };
       window.addEventListener('unhandledrejection', function(event) {
-        document.body.innerHTML = '<div style="color:red;background:white;padding:20px;z-index:9999;position:relative;min-height:100vh;"><h3>Unhandled Promise:</h3><p>' + event.reason + '</p></div>';
+        var el = document.body || document.documentElement;
+        el.innerHTML = '<div style="color:red;background:white;padding:20px;z-index:9999;position:relative;min-height:100vh;"><h3>Unhandled Promise:</h3><p>' + event.reason + '</p></div>';
       });
     </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
