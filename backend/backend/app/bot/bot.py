@@ -171,12 +171,24 @@ def _get_gspread_client() -> gspread.Client | None:
     try:
         json_env = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON") or os.getenv("CREDENTIALS_JSON")
         if json_env:
+            raw = json_env.strip()
+            # If wrapped in quotes, unwrap
+            if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+                raw = raw[1:-1]
             try:
-                info = json.loads(json_env)
+                info = json.loads(raw)
+            except Exception:
+                try:
+                    # Attempt unescaping if string contains literal \n and \"
+                    raw_unescaped = raw.encode("utf-8").decode("unicode_escape")
+                    info = json.loads(raw_unescaped)
+                except Exception as e:
+                    logger.warning(f"Google Sheets auth from JSON env failed: {e}")
+                    info = None
+
+            if info and isinstance(info, dict):
                 creds = Credentials.from_service_account_info(info, scopes=SCOPES)
                 return gspread.authorize(creds)
-            except Exception as e:
-                logger.warning(f"Google Sheets auth from JSON env failed: {e}")
 
         if os.path.exists(CREDENTIALS_FILE):
             creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
