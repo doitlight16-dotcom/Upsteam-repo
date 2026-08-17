@@ -187,6 +187,14 @@ def _get_gspread_client() -> gspread.Client | None:
                     info = None
 
             if info and isinstance(info, dict):
+                # Robustly reconstruct the private key PEM format
+                if 'private_key' in info and isinstance(info['private_key'], str):
+                    import re
+                    pk = info['private_key']
+                    b64_data = re.sub(r'-----.*?-----|\s+', '', pk)
+                    lines = [b64_data[i:i+64] for i in range(0, len(b64_data), 64)]
+                    info['private_key'] = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(lines) + "\n-----END PRIVATE KEY-----\n"
+                
                 creds = Credentials.from_service_account_info(info, scopes=SCOPES)
                 return gspread.authorize(creds)
 
