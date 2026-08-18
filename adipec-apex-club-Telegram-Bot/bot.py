@@ -26,6 +26,11 @@ import re
 import sys
 from datetime import datetime
 from typing import Any
+from contextlib import asynccontextmanager
+import uvicorn
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from aiogram import Bot, Dispatcher, F, Router, types
 from aiogram.client.default import DefaultBotProperties
@@ -567,20 +572,42 @@ async def general_fallback(message: Message, state: FSMContext) -> None:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 8.  ТОЧКА ВХОДА
+# 8.  ТОЧКА ВХОДА (FastAPI + Aiogram Background Polling)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
+dp = Dispatcher()
+dp.include_router(router)
 
-async def main() -> None:
-    bot = Bot(
-        token=BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
-    dp = Dispatcher()
-    dp.include_router(router)
-    logger.info("🚀 APEX ASSET SUITE Bot (Ясмина) starting polling…")
-    await dp.start_polling(bot)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # При запуске FastAPI стартует и поллинг бота в фоне
+    logger.info("🚀 APEX ASSET SUITE Bot (Ясмина) starting polling (background)…")
+    polling_task = asyncio.create_task(dp.start_polling(bot))
+    yield
+    # При остановке
+    polling_task.cancel()
+    await bot.session.close()
 
+app = FastAPI(lifespan=lifespan)
+
+# Настройка CORS для будущих API-запросов от Web App
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Укажите домен Vercel в продакшене
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+async def health_check():
+    """Endpoint для health check на хостингах вроде Render/Railway"""
+    return {"status": "ok", "message": "Bot is running"}
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
