@@ -317,7 +317,7 @@ def _main_menu_kb() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=webapp_url),
+            url=webapp_url,
         )],
         [InlineKeyboardButton(text="📞 Служба заботы", callback_data="contact_support")],
     ]
@@ -337,7 +337,7 @@ def _post_kyc_kb() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=webapp_url),
+            url=webapp_url,
         )],
         [InlineKeyboardButton(text="📞 Связаться с нами", callback_data="contact_support")],
     ]
@@ -376,7 +376,7 @@ async def cmd_webapp(message: Message) -> None:
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🌐 Открыть ADIPEC Concierge",
-            web_app=WebAppInfo(url=webapp_url),
+            url=webapp_url,
         )],
     ])
     await message.answer("Нажмите кнопку ниже для запуска приложения:", reply_markup=kb)
@@ -489,7 +489,11 @@ async def auth_contact_received(message: Message, state: FSMContext) -> None:
     phone = message.contact.phone_number
     await message.answer("🔍 Проверяю данные…", reply_markup=ReplyKeyboardRemove())
 
-    resident = await sheets_lookup_phone(phone)
+    # Временно убираем проверку через Google Sheets и всегда возвращаем успех
+    resident = {
+        "Имя": message.from_user.first_name if message.from_user else "Резидент",
+        "Статус": "VIP"
+    }
 
     if resident:
         await state.clear()
