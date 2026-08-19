@@ -61,6 +61,13 @@ if _raw_vercel_url and not _raw_vercel_url.startswith("http"):
     VERCEL_URL: str = f"https://{_raw_vercel_url}"
 else:
     VERCEL_URL: str = _raw_vercel_url
+
+# WEBHOOK_BASE_URL имеет приоритет над VERCEL_URL.
+# Vercel автоматически перезаписывает VERCEL_URL deployment-специфичным URL
+# (например: my-app-abc123.vercel.app), что ломает вебхук после каждого деплоя.
+# Задайте WEBHOOK_BASE_URL вручную в Vercel Dashboard → Settings → Environment Variables:
+#   WEBHOOK_BASE_URL = https://appex-adipec-concierge-backend.vercel.app
+WEBHOOK_BASE_URL: str = os.getenv("WEBHOOK_BASE_URL", "").rstrip("/") or VERCEL_URL
 UPSTASH_REDIS_URL: str = os.getenv("UPSTASH_REDIS_URL") or os.getenv("REDIS_URL", "")
 ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "https://appex-adipec-concierge.vercel.app")
 
@@ -168,13 +175,13 @@ async def setup_webhook() -> dict:
     """
     if not BOT_TOKEN:
         raise HTTPException(status_code=500, detail="BOT_TOKEN not configured")
-    if not VERCEL_URL:
+    if not WEBHOOK_BASE_URL:
         raise HTTPException(
             status_code=500,
-            detail="VERCEL_URL not configured. Set it in Vercel Environment Variables."
+            detail="Set WEBHOOK_BASE_URL in Vercel Environment Variables (e.g. https://appex-adipec-concierge-backend.vercel.app)"
         )
 
-    webhook_url = f"{VERCEL_URL}/api/webhook"
+    webhook_url = f"{WEBHOOK_BASE_URL}/api/webhook"
 
     try:
         await bot.set_webhook(
