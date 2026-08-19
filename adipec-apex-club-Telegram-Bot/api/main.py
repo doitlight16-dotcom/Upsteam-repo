@@ -54,7 +54,13 @@ if not BOT_TOKEN:
     # Вместо этого эндпоинты вернут 500 при попытке использовать бота.
 
 WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
-VERCEL_URL: str = os.getenv("VERCEL_URL", "").rstrip("/")
+_raw_vercel_url: str = os.getenv("VERCEL_URL", "").rstrip("/")
+# Vercel предоставляет VERCEL_URL без протокола (например: my-app.vercel.app)
+# Добавляем https:// если протокол отсутствует
+if _raw_vercel_url and not _raw_vercel_url.startswith("http"):
+    VERCEL_URL: str = f"https://{_raw_vercel_url}"
+else:
+    VERCEL_URL: str = _raw_vercel_url
 UPSTASH_REDIS_URL: str = os.getenv("UPSTASH_REDIS_URL") or os.getenv("REDIS_URL", "")
 ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "https://appex-adipec-concierge.vercel.app")
 
@@ -117,7 +123,7 @@ app.add_middleware(
 # ЭНДПОИНТЫ
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-@app.post("/api/webhook")
+@app.post("/webhook")
 async def telegram_webhook(request: Request) -> dict:
     """
     Telegram шлёт сюда POST-запрос при каждом сообщении/callback.
@@ -149,7 +155,7 @@ async def telegram_webhook(request: Request) -> dict:
         return {"ok": False, "error": str(e)}
 
 
-@app.get("/api/setup")
+@app.get("/setup")
 async def setup_webhook() -> dict:
     """
     Регистрирует вебхук в Telegram.
@@ -188,7 +194,7 @@ async def setup_webhook() -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/setup")
+@app.delete("/setup")
 async def delete_webhook() -> dict:
     """Удаляет вебхук (полезно при переезде или для отладки)."""
     if not BOT_TOKEN:
@@ -200,7 +206,7 @@ async def delete_webhook() -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check() -> dict:
     """Health check для мониторинга."""
     webhook_configured = False
