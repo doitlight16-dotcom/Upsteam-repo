@@ -124,6 +124,7 @@ app.add_middleware(
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @app.post("/webhook")
+@app.post("/api/webhook")
 async def telegram_webhook(request: Request) -> dict:
     """
     Telegram шлёт сюда POST-запрос при каждом сообщении/callback.
@@ -156,11 +157,12 @@ async def telegram_webhook(request: Request) -> dict:
 
 
 @app.get("/setup")
+@app.get("/api/setup")
 async def setup_webhook() -> dict:
     """
     Регистрирует вебхук в Telegram.
     Вызовите ОДИН РАЗ после деплоя:
-      GET https://your-project.vercel.app/api/setup
+      GET https://your-project.vercel.app/setup (или /api/setup)
 
     После успешной регистрации этот эндпоинт можно не трогать.
     """
@@ -195,6 +197,7 @@ async def setup_webhook() -> dict:
 
 
 @app.delete("/setup")
+@app.delete("/api/setup")
 async def delete_webhook() -> dict:
     """Удаляет вебхук (полезно при переезде или для отладки)."""
     if not BOT_TOKEN:
@@ -206,7 +209,9 @@ async def delete_webhook() -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/")
 @app.get("/health")
+@app.get("/api/health")
 async def health_check() -> dict:
     """Health check для мониторинга."""
     webhook_configured = False
