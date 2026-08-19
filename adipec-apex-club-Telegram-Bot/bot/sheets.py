@@ -33,19 +33,23 @@ def _get_gspread_client() -> gspread.Client | None:
         if json_env:
             try:
                 info = json.loads(json_env)
+                # Фикс для Vercel: восстанавливаем переносы строк в приватном ключе
+                if "private_key" in info:
+                    info["private_key"] = info["private_key"].replace("\\n", "\n")
+                
                 creds = Credentials.from_service_account_info(info, scopes=SCOPES)
                 return gspread.authorize(creds)
             except Exception as e:
-                logger.warning(f"Google Sheets auth from JSON env failed: {e}")
+                logger.error(f"❌ Ошибка авторизации Google Sheets из JSON: {e}")
 
         if os.path.exists(CREDENTIALS_FILE):
             creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
             return gspread.authorize(creds)
 
-        logger.warning("Google Sheets credentials not found.")
+        logger.error("❌ Учетные данные Google Sheets не найдены (ни JSON, ни файл).")
         return None
     except Exception as e:
-        logger.warning(f"Google Sheets auth failed: {e}")
+        logger.error(f"❌ Общая ошибка авторизации Google Sheets: {e}")
         return None
 
 
