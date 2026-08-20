@@ -18,8 +18,8 @@ from .tenant import _load_tenant
 
 logger = logging.getLogger(__name__)
 
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 MAX_HISTORY_MESSAGES: int = 20  # Cap conversation history sent to LLM
 
 
@@ -44,29 +44,33 @@ class ChatResponse(BaseModel):
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# OPENAI CLIENT (lazy init)
+# LLM CLIENT (Google Gemini via OpenAI SDK)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-_openai_client = None
+_llm_client = None
 
 
-def _get_openai():
-    """Lazy-initialize OpenAI client."""
-    global _openai_client
-    if _openai_client is not None:
-        return _openai_client
+def _get_llm_client():
+    """Lazy-initialize Google Gemini client."""
+    global _llm_client
+    if _llm_client is not None:
+        return _llm_client, GEMINI_MODEL
 
-    if not OPENAI_API_KEY:
-        return None
+    from openai import OpenAI
+
+    if not GEMINI_API_KEY:
+        return None, None
 
     try:
-        from openai import OpenAI
-        _openai_client = OpenAI(api_key=OPENAI_API_KEY)
-        logger.info("✅ OpenAI client initialized (model: %s)", OPENAI_MODEL)
-        return _openai_client
+        _llm_client = OpenAI(
+            api_key=GEMINI_API_KEY,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
+        logger.info("✅ Gemini client initialized (model: %s)", GEMINI_MODEL)
+        return _llm_client, GEMINI_MODEL
     except Exception as e:
-        logger.error("❌ OpenAI init failed: %s", e)
-        return None
+        logger.error("❌ Gemini init failed: %s", e)
+        return None, None
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -83,11 +87,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
     Injects tenant metadata and domain data as system prompt context.
     Maintains conversation history from the client side (stateless backend).
     """
-    client = _get_openai()
+    client, model_name = _get_llm_client()
     if not client:
         raise HTTPException(
             status_code=503,
-            detail="AI Concierge unavailable — OPENAI_API_KEY not configured.",
+            detail="AI Concierge unavailable — GEMINI_API_KEY or OPENAI_API_KEY not configured.",
         )
 
     # Load tenant config for system prompt injection
@@ -96,24 +100,24 @@ async def chat(request: ChatRequest) -> ChatResponse:
         tenant_config=tenant_config.model_dump(),
     )
 
-    # Build messages array for OpenAI
-    openai_messages = [{"role": "system", "content": system_prompt}]
+    # Build messages array for LLM
+    llm_messages = [{"role": "system", "content": system_prompt}]
 
     # Trim conversation history to prevent token overflow
     recent_messages = request.messages[-MAX_HISTORY_MESSAGES:]
     for msg in recent_messages:
         if msg.role in ("user", "assistant"):
-            openai_messages.append({"role": msg.role, "content": msg.content})
+            llm_messages.append({"role": msg.role, "content": msg.content})
 
     try:
         completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=openai_messages,
+            model=model_name,
+            messages=llm_messages,
             max_tokens=1024,
             temperature=0.7,
         )
         reply = completion.choices[0].message.content or "Не удалось сгенерировать ответ."
-        model_used = completion.model or OPENAI_MODEL
+        model_used = completion.model or model_name
 
         logger.info(
             "Concierge chat: tenant=%s, user_msgs=%d, model=%s, tokens=%s",
@@ -126,7 +130,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         return ChatResponse(reply=reply, model=model_used)
 
     except Exception as e:
-        logger.exception("OpenAI chat completion error: %s", e)
+        logger.exception("LLM chat completion error: %s", e)
         raise HTTPException(
             status_code=500,
             detail=f"AI processing error: {str(e)}",

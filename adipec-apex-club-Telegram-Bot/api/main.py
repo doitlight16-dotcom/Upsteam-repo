@@ -48,7 +48,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Новые env vars для White-Label и AI Concierge
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 ADMIN_SECRET: str = os.getenv("ADMIN_SECRET", "")
 IS_DEV: bool = os.getenv("VERCEL_ENV", "development") == "development"
 
@@ -248,7 +248,7 @@ async def health_check() -> dict:
         "bot_token_set": bool(BOT_TOKEN),
         "webhook_secret_set": bool(WEBHOOK_SECRET),
         "redis_configured": bool(UPSTASH_REDIS_URL),
-        "openai_configured": bool(OPENAI_API_KEY),
+        "ai_configured": bool(GEMINI_API_KEY),
         "admin_configured": bool(ADMIN_SECRET),
         "webhook_configured": webhook_configured,
     }
