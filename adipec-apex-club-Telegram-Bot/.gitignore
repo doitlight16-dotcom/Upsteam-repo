@@ -5,3 +5,5 @@ leads.db
 .DS_Store
 patch.py
 *.log
+.vercel
+.env*
