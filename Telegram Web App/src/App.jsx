@@ -22,27 +22,15 @@ import {
   Languages,
   BadgeCheck,
   LogOut,
+  Settings,
 } from "lucide-react";
 
+import { useTenant } from "./context/TenantContext";
+import FloatingActionButton from "./components/FloatingActionButton";
+import ChatDrawer from "./components/ChatDrawer";
 
-const C = {
-  bg: "#141210",
-  surface: "#1C1812",
-  surfaceHi: "#242017",
-  border: "#39311F",
-  borderHi: "#4E4327",
-  gold: "#C9A227",
-  goldBright: "#E9CA73",
-  text: "#F1EAD9",
-  textMuted: "#9C9384",
-  textFaint: "#6E6656",
-  brick: "#9C3F35",
-  sage: "#748A6C",
-};
 
-const fontDisplay = "'Fraunces', serif";
-const fontBody = "'Manrope', sans-serif";
-const fontMono = "'IBM Plex Mono', monospace"; 
+/* ── Demo Data (unchanged) ── */
 
 const DELEGATE = {
   name: "Асхат Ержанов",
@@ -154,11 +142,13 @@ const LOTS = [
   },
 ];
 
+
 /* ---------------------------------------------------------------------- */
-/*  ПРИМИТИВЫ                                                              */
+/*  ПРИМИТИВЫ (now using TenantContext)                                     */
 /* ---------------------------------------------------------------------- */
 
 function GuillochePattern({ id }) {
+  const { colors } = useTenant();
   return (
     <svg width="0" height="0" style={{ position: "absolute" }}>
       <defs>
@@ -168,7 +158,7 @@ function GuillochePattern({ id }) {
               key={i}
               d={`M -10 ${8 * i} C 16 ${8 * i - 14}, 48 ${8 * i + 14}, 74 ${8 * i}`}
               fill="none"
-              stroke={C.gold}
+              stroke={colors.gold}
               strokeWidth="0.6"
               opacity="0.5"
             />
@@ -180,18 +170,19 @@ function GuillochePattern({ id }) {
 }
 
 function TopBar({ title, onBack, right }) {
+  const { colors, fonts } = useTenant();
   return (
     <div
       className="flex items-center justify-between px-5 py-4 sticky top-0 z-20"
-      style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}
+      style={{ background: colors.bg, borderBottom: `1px solid ${colors.border}` }}
     >
       <div className="flex items-center gap-3">
         {onBack && (
           <button onClick={onBack} className="p-1 -ml-1" aria-label="Назад">
-            <ArrowLeft size={20} color={C.textMuted} />
+            <ArrowLeft size={20} color={colors.textMuted} />
           </button>
         )}
-        <span style={{ fontFamily: fontDisplay, color: C.text, fontSize: 19, letterSpacing: 0.2 }}>
+        <span style={{ fontFamily: fonts.display, color: colors.text, fontSize: 19, letterSpacing: 0.2 }}>
           {title}
         </span>
       </div>
@@ -201,14 +192,15 @@ function TopBar({ title, onBack, right }) {
 }
 
 function EyebrowLabel({ children }) {
+  const { colors, fonts } = useTenant();
   return (
     <div
       className="uppercase mb-2"
       style={{
-        fontFamily: fontMono,
+        fontFamily: fonts.mono,
         fontSize: 11,
         letterSpacing: 2,
-        color: C.gold,
+        color: colors.gold,
       }}
     >
       {children}
@@ -217,20 +209,22 @@ function EyebrowLabel({ children }) {
 }
 
 function SosButton({ onClick }) {
+  const { colors, fonts } = useTenant();
   return (
     <button
       onClick={onClick}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-      style={{ background: "rgba(156,63,53,0.14)", border: `1px solid ${C.brick}` }}
+      style={{ background: "rgba(156,63,53,0.14)", border: `1px solid ${colors.accentDanger}` }}
     >
-      <AlertTriangle size={13} color={C.brick} />
-      <span style={{ fontFamily: fontMono, fontSize: 11, color: C.brick, letterSpacing: 1 }}>SOS</span>
+      <AlertTriangle size={13} color={colors.accentDanger} />
+      <span style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.accentDanger, letterSpacing: 1 }}>SOS</span>
     </button>
   );
 }
 
 
 function LoginScreen({ onLogin }) {
+  const { colors, fonts, tenant } = useTenant();
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [mode, setMode] = useState("email");
@@ -239,7 +233,7 @@ function LoginScreen({ onLogin }) {
   return (
     <div
       className="h-full flex flex-col justify-between px-6 pb-8 pt-16 relative overflow-hidden"
-      style={{ background: `radial-gradient(120% 90% at 50% -10%, #221D14 0%, ${C.bg} 60%)` }}
+      style={{ background: `radial-gradient(120% 90% at 50% -10%, #221D14 0%, ${colors.bg} 60%)` }}
     >
       <GuillochePattern id="pattern-login" />
       <div
@@ -252,46 +246,56 @@ function LoginScreen({ onLogin }) {
 
       <div className="relative z-10">
         <div className="flex flex-col items-center text-center mt-4">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
-            style={{ border: `1px solid ${C.borderHi}`, background: C.surface }}
-          >
-            <ShieldCheck size={24} color={C.gold} strokeWidth={1.5} />
-          </div>
-          <div style={{ fontFamily: fontMono, fontSize: 11, letterSpacing: 3, color: C.textFaint }}>
-            APPEX ASSET SUITE
+          {/* Logo or default shield icon */}
+          {tenant.logo_url ? (
+            <img
+              src={tenant.logo_url}
+              alt="Logo"
+              className="w-14 h-14 rounded-full object-cover mb-5"
+              style={{ border: `1px solid ${colors.borderHi}` }}
+            />
+          ) : (
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
+              style={{ border: `1px solid ${colors.borderHi}`, background: colors.surface }}
+            >
+              <ShieldCheck size={24} color={colors.gold} strokeWidth={1.5} />
+            </div>
+          )}
+          <div style={{ fontFamily: fonts.mono, fontSize: 11, letterSpacing: 3, color: colors.textFaint }}>
+            {tenant.brand_name}
           </div>
           <div
             style={{
-              fontFamily: fontDisplay,
+              fontFamily: fonts.display,
               fontStyle: "italic",
               fontSize: 30,
-              color: C.text,
+              color: colors.text,
               marginTop: 6,
               lineHeight: 1.15,
             }}
           >
-            ADIPEC Concierge
+            {tenant.event_name}
           </div>
-          <div style={{ fontFamily: fontBody, fontSize: 13, color: C.textMuted, marginTop: 10 }}>
-            АО «НК «КазМунайГаз» · закрытый доступ делегатов
+          <div style={{ fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: 10 }}>
+            {tenant.tagline}
           </div>
         </div>
 
         <div
           className="mt-10 rounded-2xl p-5"
-          style={{ background: C.surface, border: `1px solid ${C.border}` }}
+          style={{ background: colors.surface, border: `1px solid ${colors.border}` }}
         >
           <div className="flex gap-2 mb-5">
             <button
               onClick={() => setMode("email")}
               className="flex-1 py-2 rounded-lg text-center"
               style={{
-                fontFamily: fontBody,
+                fontFamily: fonts.body,
                 fontSize: 13,
                 background: mode === "email" ? "rgba(201,162,39,0.12)" : "transparent",
-                color: mode === "email" ? C.gold : C.textMuted,
-                border: `1px solid ${mode === "email" ? C.gold : C.border}`,
+                color: mode === "email" ? colors.gold : colors.textMuted,
+                border: `1px solid ${mode === "email" ? colors.gold : colors.border}`,
               }}
             >
               Корпоративная почта
@@ -300,11 +304,11 @@ function LoginScreen({ onLogin }) {
               onClick={() => setMode("token")}
               className="flex-1 py-2 rounded-lg text-center"
               style={{
-                fontFamily: fontBody,
+                fontFamily: fonts.body,
                 fontSize: 13,
                 background: mode === "token" ? "rgba(201,162,39,0.12)" : "transparent",
-                color: mode === "token" ? C.gold : C.textMuted,
-                border: `1px solid ${mode === "token" ? C.gold : C.border}`,
+                color: mode === "token" ? colors.gold : colors.textMuted,
+                border: `1px solid ${mode === "token" ? colors.gold : colors.border}`,
               }}
             >
               Токен-приглашение
@@ -312,25 +316,25 @@ function LoginScreen({ onLogin }) {
           </div>
 
           {mode === "email" ? (
-            <label className="flex items-center gap-3 px-3 py-3 rounded-lg" style={{ border: `1px solid ${C.border}` }}>
-              <Mail size={16} color={C.textFaint} />
+            <label className="flex items-center gap-3 px-3 py-3 rounded-lg" style={{ border: `1px solid ${colors.border}` }}>
+              <Mail size={16} color={colors.textFaint} />
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ismail@kmg.kz"
                 className="bg-transparent outline-none flex-1"
-                style={{ fontFamily: fontBody, fontSize: 14, color: C.text }}
+                style={{ fontFamily: fonts.body, fontSize: 14, color: colors.text }}
               />
             </label>
           ) : (
-            <label className="flex items-center gap-3 px-3 py-3 rounded-lg" style={{ border: `1px solid ${C.border}` }}>
-              <KeyRound size={16} color={C.textFaint} />
+            <label className="flex items-center gap-3 px-3 py-3 rounded-lg" style={{ border: `1px solid ${colors.border}` }}>
+              <KeyRound size={16} color={colors.textFaint} />
               <input
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="ADIPEC-XXXXXX"
                 className="bg-transparent outline-none flex-1"
-                style={{ fontFamily: fontMono, fontSize: 14, color: C.text, letterSpacing: 1 }}
+                style={{ fontFamily: fonts.mono, fontSize: 14, color: colors.text, letterSpacing: 1 }}
               />
             </label>
           )}
@@ -340,11 +344,11 @@ function LoginScreen({ onLogin }) {
             onClick={onLogin}
             className="w-full mt-5 py-3 rounded-lg flex items-center justify-center gap-2"
             style={{
-              fontFamily: fontBody,
+              fontFamily: fonts.body,
               fontSize: 14,
               fontWeight: 600,
-              background: canSubmit ? C.gold : C.surfaceHi,
-              color: canSubmit ? "#1A1508" : C.textFaint,
+              background: canSubmit ? colors.gold : colors.surfaceHi,
+              color: canSubmit ? "#1A1508" : colors.textFaint,
               transition: "all 180ms ease",
             }}
           >
@@ -355,9 +359,9 @@ function LoginScreen({ onLogin }) {
       </div>
 
       <div className="relative z-10 flex items-center justify-center gap-2 mt-8">
-        <Lock size={12} color={C.textFaint} />
-        <span style={{ fontFamily: fontBody, fontSize: 11.5, color: C.textFaint, textAlign: "center" }}>
-          Доступ разрешён только верифицированным делегатам КМГ
+        <Lock size={12} color={colors.textFaint} />
+        <span style={{ fontFamily: fonts.body, fontSize: 11.5, color: colors.textFaint, textAlign: "center" }}>
+          Доступ разрешён только верифицированным делегатам
         </span>
       </div>
     </div>
@@ -366,22 +370,23 @@ function LoginScreen({ onLogin }) {
 
 
 function DashboardScreen({ go, onSos }) {
+  const { colors, fonts, tenant } = useTenant();
   return (
-    <div className="h-full overflow-y-auto pb-28" style={{ background: C.bg }}>
-      <div className="px-5 pt-14 pb-6 relative" style={{ borderBottom: `1px solid ${C.border}` }}>
+    <div className="h-full overflow-y-auto pb-28" style={{ background: colors.bg }}>
+      <div className="px-5 pt-14 pb-6 relative" style={{ borderBottom: `1px solid ${colors.border}` }}>
         <GuillochePattern id="pattern-dash" />
         <svg className="absolute inset-0 w-full h-full opacity-[0.05] pointer-events-none">
           <rect width="100%" height="100%" fill="url(#pattern-dash)" />
         </svg>
         <div className="relative flex items-start justify-between">
           <div>
-            <div style={{ fontFamily: fontMono, fontSize: 10.5, letterSpacing: 2, color: C.textFaint }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: 10.5, letterSpacing: 2, color: colors.textFaint }}>
               БЕЙДЖ {DELEGATE.badge}
             </div>
-            <div style={{ fontFamily: fontDisplay, fontSize: 24, color: C.text, marginTop: 4 }}>
+            <div style={{ fontFamily: fonts.display, fontSize: 24, color: colors.text, marginTop: 4 }}>
               {DELEGATE.name}
             </div>
-            <div style={{ fontFamily: fontBody, fontSize: 12.5, color: C.textMuted, marginTop: 3, maxWidth: 230 }}>
+            <div style={{ fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, marginTop: 3, maxWidth: 230 }}>
               {DELEGATE.role}, {DELEGATE.org}
             </div>
           </div>
@@ -390,22 +395,22 @@ function DashboardScreen({ go, onSos }) {
       </div>
 
       <div className="px-5 mt-6">
-        <EyebrowLabel>Расписание ADIPEC · сегодня</EyebrowLabel>
-        <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${C.border}`, background: C.surface }}>
+        <EyebrowLabel>Расписание · сегодня</EyebrowLabel>
+        <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${colors.border}`, background: colors.surface }}>
           {SCHEDULE.map((s, i) => (
             <div
               key={i}
               className="flex items-center gap-4 px-4 py-3.5"
-              style={{ borderBottom: i < SCHEDULE.length - 1 ? `1px solid ${C.border}` : "none" }}
+              style={{ borderBottom: i < SCHEDULE.length - 1 ? `1px solid ${colors.border}` : "none" }}
             >
-              <div style={{ fontFamily: fontMono, fontSize: 13, color: C.gold, minWidth: 42 }}>{s.time}</div>
+              <div style={{ fontFamily: fonts.mono, fontSize: 13, color: colors.gold, minWidth: 42 }}>{s.time}</div>
               <div className="flex-1">
-                <div style={{ fontFamily: fontBody, fontSize: 13.5, color: C.text, fontWeight: 600 }}>{s.title}</div>
-                <div style={{ fontFamily: fontBody, fontSize: 12, color: C.textMuted, marginTop: 1 }}>{s.place}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 13.5, color: colors.text, fontWeight: 600 }}>{s.title}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, marginTop: 1 }}>{s.place}</div>
               </div>
               <div
                 className="px-2 py-1 rounded-md"
-                style={{ background: C.surfaceHi, fontFamily: fontMono, fontSize: 10, color: C.textMuted }}
+                style={{ background: colors.surfaceHi, fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted }}
               >
                 {s.tag}
               </div>
@@ -427,14 +432,15 @@ function DashboardScreen({ go, onSos }) {
 }
 
 function NavTile({ icon: Icon, label, onClick }) {
+  const { colors, fonts } = useTenant();
   return (
     <button
       onClick={onClick}
       className="flex flex-col items-center justify-center gap-2.5 py-5 rounded-2xl"
-      style={{ background: C.surface, border: `1px solid ${C.border}` }}
+      style={{ background: colors.surface, border: `1px solid ${colors.border}` }}
     >
-      <Icon size={20} color={C.gold} strokeWidth={1.6} />
-      <span style={{ fontFamily: fontBody, fontSize: 11.5, color: C.text, textAlign: "center", lineHeight: 1.25 }}>
+      <Icon size={20} color={colors.gold} strokeWidth={1.6} />
+      <span style={{ fontFamily: fonts.body, fontSize: 11.5, color: colors.text, textAlign: "center", lineHeight: 1.25 }}>
         {label}
       </span>
     </button>
@@ -442,11 +448,11 @@ function NavTile({ icon: Icon, label, onClick }) {
 }
 
 function FleetScreen({ onBack }) {
+  const { colors, fonts } = useTenant();
   const [selected, setSelected] = useState(FLEET[0].id);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
   const car = FLEET.find((c) => c.id === selected);
-  const dotRef = useRef(null);
 
   useEffect(() => {
     setRequested(false);
@@ -461,13 +467,13 @@ function FleetScreen({ onBack }) {
   };
 
   return (
-    <div className="h-full flex flex-col" style={{ background: C.bg }}>
+    <div className="h-full flex flex-col" style={{ background: colors.bg }}>
       <TopBar title="Мой автопарк" onBack={onBack} />
 
       <div className="px-5 pt-4">
         <div
           className="relative rounded-2xl overflow-hidden"
-          style={{ height: 168, border: `1px solid ${C.border}`, background: "#1A2119" }}
+          style={{ height: 168, border: `1px solid ${colors.border}`, background: "#1A2119" }}
         >
           <svg viewBox="0 0 400 168" className="w-full h-full">
             <defs>
@@ -479,14 +485,14 @@ function FleetScreen({ onBack }) {
             <path d="M0 60 L400 40" stroke="#3B4A34" strokeWidth="10" />
             <path d="M0 60 L400 40" stroke="#5C6E52" strokeWidth="1.5" strokeDasharray="6 6" />
             <path d="M60 0 L120 168" stroke="#2F3A29" strokeWidth="14" />
-            <circle cx="230" cy="46" r="6" fill={C.gold}>
+            <circle cx="230" cy="46" r="6" fill={colors.gold}>
               <animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite" />
             </circle>
-            <circle cx="230" cy="46" r="12" fill="none" stroke={C.gold} strokeWidth="1" opacity="0.5">
+            <circle cx="230" cy="46" r="12" fill="none" stroke={colors.gold} strokeWidth="1" opacity="0.5">
               <animate attributeName="r" values="10;20;10" dur="2s" repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
             </circle>
-            <text x="240" y="42" fill={C.goldBright} fontSize="9" fontFamily={fontMono}>
+            <text x="240" y="42" fill={colors.goldBright} fontSize="9" fontFamily={fonts.mono}>
               {car.model.split(" ")[0]}
             </text>
           </svg>
@@ -494,8 +500,8 @@ function FleetScreen({ onBack }) {
             className="absolute bottom-3 left-3 px-2.5 py-1 rounded-md flex items-center gap-1.5"
             style={{ background: "rgba(20,18,16,0.85)" }}
           >
-            <MapPin size={11} color={C.gold} />
-            <span style={{ fontFamily: fontMono, fontSize: 10.5, color: C.text }}>{car.status}</span>
+            <MapPin size={11} color={colors.gold} />
+            <span style={{ fontFamily: fonts.mono, fontSize: 10.5, color: colors.text }}>{car.status}</span>
           </div>
         </div>
       </div>
@@ -509,36 +515,36 @@ function FleetScreen({ onBack }) {
               onClick={() => setSelected(c.id)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-left"
               style={{
-                background: c.id === selected ? "rgba(201,162,39,0.10)" : C.surface,
-                border: `1px solid ${c.id === selected ? C.gold : C.border}`,
+                background: c.id === selected ? "rgba(201,162,39,0.10)" : colors.surface,
+                border: `1px solid ${c.id === selected ? colors.gold : colors.border}`,
               }}
             >
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: C.surfaceHi }}
+                style={{ background: colors.surfaceHi }}
               >
-                <Car size={16} color={c.id === selected ? C.gold : C.textMuted} />
+                <Car size={16} color={c.id === selected ? colors.gold : colors.textMuted} />
               </div>
               <div className="flex-1">
-                <div style={{ fontFamily: fontBody, fontSize: 13.5, color: C.text, fontWeight: 600 }}>{c.model}</div>
-                <div style={{ fontFamily: fontMono, fontSize: 11, color: C.textFaint, marginTop: 1 }}>{c.plate} · ETA {c.eta}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 13.5, color: colors.text, fontWeight: 600 }}>{c.model}</div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textFaint, marginTop: 1 }}>{c.plate} · ETA {c.eta}</div>
               </div>
-              {c.id === selected && <ChevronRight size={15} color={C.gold} />}
+              {c.id === selected && <ChevronRight size={15} color={colors.gold} />}
             </button>
           ))}
         </div>
       </div>
 
       <div className="px-5 mt-5 mb-6">
-        <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: C.surfaceHi, border: `1px solid ${C.border}` }}>
-            <span style={{ fontFamily: fontDisplay, fontSize: 16, color: C.gold }}>{car.driver[0]}</span>
+        <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: colors.surfaceHi, border: `1px solid ${colors.border}` }}>
+            <span style={{ fontFamily: fonts.display, fontSize: 16, color: colors.gold }}>{car.driver[0]}</span>
           </div>
           <div className="flex-1">
-            <div style={{ fontFamily: fontBody, fontSize: 13.5, color: C.text, fontWeight: 600 }}>{car.driver}</div>
+            <div style={{ fontFamily: fonts.body, fontSize: 13.5, color: colors.text, fontWeight: 600 }}>{car.driver}</div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <Languages size={11} color={C.textFaint} />
-              <span style={{ fontFamily: fontBody, fontSize: 11.5, color: C.textMuted }}>{car.lang}</span>
+              <Languages size={11} color={colors.textFaint} />
+              <span style={{ fontFamily: fonts.body, fontSize: 11.5, color: colors.textMuted }}>{car.lang}</span>
             </div>
           </div>
           <a
@@ -546,7 +552,7 @@ function FleetScreen({ onBack }) {
             className="w-9 h-9 rounded-full flex items-center justify-center"
             style={{ background: "rgba(201,162,39,0.14)" }}
           >
-            <Phone size={14} color={C.gold} />
+            <Phone size={14} color={colors.gold} />
           </a>
         </div>
       </div>
@@ -557,10 +563,10 @@ function FleetScreen({ onBack }) {
           disabled={requesting}
           className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2"
           style={{
-            fontFamily: fontBody,
+            fontFamily: fonts.body,
             fontSize: 14,
             fontWeight: 600,
-            background: requested ? C.sage : C.gold,
+            background: requested ? colors.accentSuccess : colors.gold,
             color: "#1A1508",
           }}
         >
@@ -580,42 +586,43 @@ function minutesToLabel(m) {
 }
 
 function NetworkScreen({ onBack }) {
+  const { colors, fonts } = useTenant();
   const [dossier, setDossier] = useState(null);
 
   return (
-    <div className="h-full overflow-y-auto pb-10" style={{ background: C.bg }}>
+    <div className="h-full overflow-y-auto pb-10" style={{ background: colors.bg }}>
       <TopBar title="B2B Нетворкинг" onBack={onBack} />
       <div className="px-5 pt-4 flex flex-col gap-3.5">
         {PARTNERS.map((p) => (
-          <div key={p.id} className="rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <div key={p.id} className="rounded-2xl p-4" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
             <div className="flex items-start justify-between">
               <div>
-                <div style={{ fontFamily: fontMono, fontSize: 10.5, letterSpacing: 1.5, color: C.textFaint }}>
+                <div style={{ fontFamily: fonts.mono, fontSize: 10.5, letterSpacing: 1.5, color: colors.textFaint }}>
                   {p.country.toUpperCase()}
                 </div>
-                <div style={{ fontFamily: fontDisplay, fontSize: 18, color: C.text, marginTop: 2 }}>{p.company}</div>
-                <div style={{ fontFamily: fontBody, fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>
+                <div style={{ fontFamily: fonts.display, fontSize: 18, color: colors.text, marginTop: 2 }}>{p.company}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, marginTop: 2 }}>
                   {p.person} · {p.title}
                 </div>
               </div>
-              <BadgeCheck size={17} color={C.gold} />
+              <BadgeCheck size={17} color={colors.gold} />
             </div>
 
-            <div className="flex items-center gap-4 mt-3.5 pt-3.5" style={{ borderTop: `1px solid ${C.border}` }}>
+            <div className="flex items-center gap-4 mt-3.5 pt-3.5" style={{ borderTop: `1px solid ${colors.border}` }}>
               <div className="flex items-center gap-1.5">
-                <Clock size={13} color={C.gold} />
-                <span style={{ fontFamily: fontMono, fontSize: 12, color: C.text }}>{minutesToLabel(p.minutesLeft)}</span>
+                <Clock size={13} color={colors.gold} />
+                <span style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>{minutesToLabel(p.minutesLeft)}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <MapPin size={13} color={C.textFaint} />
-                <span style={{ fontFamily: fontBody, fontSize: 12, color: C.textMuted }}>{p.lounge}</span>
+                <MapPin size={13} color={colors.textFaint} />
+                <span style={{ fontFamily: fonts.body, fontSize: 12, color: colors.textMuted }}>{p.lounge}</span>
               </div>
             </div>
 
             <button
               onClick={() => setDossier(p)}
               className="w-full mt-3.5 py-2.5 rounded-lg flex items-center justify-center gap-1.5"
-              style={{ border: `1px solid ${C.gold}`, fontFamily: fontBody, fontSize: 12.5, color: C.gold, fontWeight: 600 }}
+              style={{ border: `1px solid ${colors.gold}`, fontFamily: fonts.body, fontSize: 12.5, color: colors.gold, fontWeight: 600 }}
             >
               Посмотреть досье компании
               <ChevronRight size={13} />
@@ -628,21 +635,21 @@ function NetworkScreen({ onBack }) {
         <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ background: "rgba(10,9,7,0.7)" }} onClick={() => setDossier(null)}>
           <div
             className="w-full rounded-t-3xl p-6 pb-9"
-            style={{ background: C.surface, border: `1px solid ${C.border}`, borderBottom: "none" }}
+            style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderBottom: "none" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <div style={{ fontFamily: fontMono, fontSize: 10, letterSpacing: 2, color: C.gold }}>ДОСЬЕ</div>
-                <div style={{ fontFamily: fontDisplay, fontSize: 22, color: C.text, marginTop: 3 }}>{dossier.company}</div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2, color: colors.gold }}>ДОСЬЕ</div>
+                <div style={{ fontFamily: fonts.display, fontSize: 22, color: colors.text, marginTop: 3 }}>{dossier.company}</div>
               </div>
               <button onClick={() => setDossier(null)}>
-                <X size={18} color={C.textMuted} />
+                <X size={18} color={colors.textMuted} />
               </button>
             </div>
-            <div style={{ fontFamily: fontBody, fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>{dossier.brief}</div>
-            <div className="mt-5 flex items-center gap-2" style={{ fontFamily: fontMono, fontSize: 11, color: C.textFaint }}>
-              <Star size={12} color={C.gold} />
+            <div style={{ fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, lineHeight: 1.6 }}>{dossier.brief}</div>
+            <div className="mt-5 flex items-center gap-2" style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textFaint }}>
+              <Star size={12} color={colors.gold} />
               подготовлено аналитиками AlmaU
             </div>
           </div>
@@ -654,34 +661,35 @@ function NetworkScreen({ onBack }) {
 
 
 function InvestScreen({ onBack }) {
+  const { colors, fonts, tenant } = useTenant();
   return (
-    <div className="h-full overflow-y-auto pb-10" style={{ background: C.bg }}>
+    <div className="h-full overflow-y-auto pb-10" style={{ background: colors.bg }}>
       <TopBar title="Инвестиционные лоты" onBack={onBack} />
       <div className="px-5 pt-3 pb-1">
-        <div style={{ fontFamily: fontBody, fontSize: 12.5, color: C.textMuted, lineHeight: 1.55 }}>
-          Закрытый каталог Appex Asset Suite. Доступен во время поездки только делегатам КМГ.
+        <div style={{ fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, lineHeight: 1.55 }}>
+          Закрытый каталог {tenant.brand_name}. Доступен во время поездки только делегатам.
         </div>
       </div>
       <div className="px-5 mt-4 flex flex-col gap-3">
         {LOTS.map((l) => {
           const Icon = l.icon;
           return (
-            <div key={l.id} className="flex items-center gap-4 rounded-2xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: C.surfaceHi }}>
-                <Icon size={18} color={C.gold} strokeWidth={1.6} />
+            <div key={l.id} className="flex items-center gap-4 rounded-2xl p-4" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: colors.surfaceHi }}>
+                <Icon size={18} color={colors.gold} strokeWidth={1.6} />
               </div>
               <div className="flex-1">
-                <div style={{ fontFamily: fontMono, fontSize: 10, letterSpacing: 1.5, color: C.textFaint }}>{l.kind.toUpperCase()}</div>
-                <div style={{ fontFamily: fontBody, fontSize: 13.5, color: C.text, fontWeight: 600, marginTop: 2 }}>{l.title}</div>
-                <div style={{ fontFamily: fontBody, fontSize: 12, color: C.textMuted, marginTop: 1 }}>{l.detail}</div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.5, color: colors.textFaint }}>{l.kind.toUpperCase()}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 13.5, color: colors.text, fontWeight: 600, marginTop: 2 }}>{l.title}</div>
+                <div style={{ fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, marginTop: 1 }}>{l.detail}</div>
               </div>
               {l.roi !== "—" && (
                 <div className="flex flex-col items-end shrink-0">
                   <div className="flex items-center gap-0.5">
-                    <span style={{ fontFamily: fontDisplay, fontSize: 17, color: C.gold }}>{l.roi}</span>
-                    <Percent size={11} color={C.gold} />
+                    <span style={{ fontFamily: fonts.display, fontSize: 17, color: colors.gold }}>{l.roi}</span>
+                    <Percent size={11} color={colors.gold} />
                   </div>
-                  <span style={{ fontFamily: fontMono, fontSize: 9.5, color: C.textFaint }}>ROI / год</span>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 9.5, color: colors.textFaint }}>ROI / год</span>
                 </div>
               )}
             </div>
@@ -694,6 +702,7 @@ function InvestScreen({ onBack }) {
 
 
 function BottomNav({ screen, go }) {
+  const { colors, fonts } = useTenant();
   const items = [
     { id: "dashboard", icon: LayoutGrid, label: "Кабинет" },
     { id: "fleet", icon: Car, label: "Автопарк" },
@@ -703,15 +712,15 @@ function BottomNav({ screen, go }) {
   return (
     <div
       className="absolute bottom-0 left-0 right-0 flex items-stretch z-20"
-      style={{ background: C.surface, borderTop: `1px solid ${C.border}` }}
+      style={{ background: colors.surface, borderTop: `1px solid ${colors.border}` }}
     >
       {items.map((it) => {
         const Icon = it.icon;
         const active = screen === it.id;
         return (
           <button key={it.id} onClick={() => go(it.id)} className="flex-1 flex flex-col items-center gap-1 py-2.5">
-            <Icon size={18} color={active ? C.gold : C.textFaint} strokeWidth={active ? 1.9 : 1.5} />
-            <span style={{ fontFamily: fontBody, fontSize: 9.5, color: active ? C.gold : C.textFaint }}>{it.label}</span>
+            <Icon size={18} color={active ? colors.gold : colors.textFaint} strokeWidth={active ? 1.9 : 1.5} />
+            <span style={{ fontFamily: fonts.body, fontSize: 9.5, color: active ? colors.gold : colors.textFaint }}>{it.label}</span>
           </button>
         );
       })}
@@ -720,10 +729,16 @@ function BottomNav({ screen, go }) {
 }
 
 
+/* ---------------------------------------------------------------------- */
+/*  APP ROOT                                                                */
+/* ---------------------------------------------------------------------- */
+
 export default function App() {
+  const { colors, fonts, tenant } = useTenant();
   const [screen, setScreen] = useState("login");
   const [sos, setSos] = useState(false);
   const tabScreens = ["dashboard", "fleet", "network", "invest"];
+  const isAuthenticated = tabScreens.includes(screen);
 
   useEffect(() => {
     if (window.Telegram?.WebApp) {
@@ -735,12 +750,7 @@ export default function App() {
   const go = (s) => setScreen(s);
 
   return (
-    <div className="w-full h-full flex items-center justify-center" style={{ background: "#0B0A08", fontFamily: fontBody }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-        ::-webkit-scrollbar { width: 0px; }
-      `}</style>
-
+    <div className="w-full h-full flex items-center justify-center" style={{ background: "#0B0A08", fontFamily: fonts.body }}>
       <div
         className="relative overflow-hidden"
         style={{
@@ -748,13 +758,18 @@ export default function App() {
           height: 780,
           maxHeight: "92vh",
           borderRadius: 34,
-          border: `1px solid ${C.borderHi}`,
+          border: `1px solid ${colors.borderHi}`,
           boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
         }}
       >
         <div className="w-full h-full relative" key={screen} style={{ animation: "fadein 260ms ease" }}>
           {screen === "login" && <LoginScreen onLogin={() => go("dashboard")} />}
-          {screen === "dashboard" && <DashboardScreen go={go} onSos={() => setSos(true)} />}
+          {screen === "dashboard" && (
+            <DashboardScreen
+              go={go}
+              onSos={() => setSos(true)}
+            />
+          )}
           {screen === "fleet" && <FleetScreen onBack={() => go("dashboard")} />}
           {screen === "network" && <NetworkScreen onBack={() => go("dashboard")} />}
           {screen === "invest" && <InvestScreen onBack={() => go("dashboard")} />}
@@ -762,27 +777,36 @@ export default function App() {
           {tabScreens.includes(screen) && <BottomNav screen={screen} go={go} />}
         </div>
 
+        {/* Floating Action Button + Chat Drawer (authenticated screens only) */}
+        {isAuthenticated && (
+          <>
+            <FloatingActionButton />
+            <ChatDrawer />
+          </>
+        )}
+
+        {/* SOS Modal */}
         {sos && (
           <div className="absolute inset-0 z-40 flex items-center justify-center px-8" style={{ background: "rgba(10,9,7,0.88)" }}>
-            <div className="w-full rounded-2xl p-6 text-center" style={{ background: C.surface, border: `1px solid ${C.brick}` }}>
-              <AlertTriangle size={26} color={C.brick} className="mx-auto" />
-              <div style={{ fontFamily: fontDisplay, fontSize: 19, color: C.text, marginTop: 12 }}>
+            <div className="w-full rounded-2xl p-6 text-center" style={{ background: colors.surface, border: `1px solid ${colors.accentDanger}` }}>
+              <AlertTriangle size={26} color={colors.accentDanger} className="mx-auto" />
+              <div style={{ fontFamily: fonts.display, fontSize: 19, color: colors.text, marginTop: 12 }}>
                 Экстренная связь
               </div>
-              <div style={{ fontFamily: fontBody, fontSize: 12.5, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>
-                Координатор Appex на площадке ADIPEC свяжется с вами в течение 2 минут.
+              <div style={{ fontFamily: fonts.body, fontSize: 12.5, color: colors.textMuted, marginTop: 6, lineHeight: 1.5 }}>
+                Координатор {tenant.brand_name} на площадке свяжется с вами в течение 2 минут.
               </div>
               <a
-                href="tel:+971500000000"
-                className="block w-full mt-5 py-3 rounded-xl"
-                style={{ background: C.brick, fontFamily: fontBody, fontSize: 13.5, color: "#F1EAD9", fontWeight: 600 }}
+                href={`tel:${(tenant.contact?.support_phone || "+971500000000").replace(/\s/g, "")}`}
+                className="block w-full mt-5 py-3 rounded-xl text-center"
+                style={{ background: colors.accentDanger, fontFamily: fonts.body, fontSize: 13.5, color: "#F1EAD9", fontWeight: 600 }}
               >
                 Позвонить координатору
               </a>
               <button
                 onClick={() => setSos(false)}
                 className="w-full mt-2.5 py-2.5"
-                style={{ fontFamily: fontBody, fontSize: 12.5, color: C.textFaint }}
+                style={{ fontFamily: fonts.body, fontSize: 12.5, color: colors.textFaint }}
               >
                 Отмена
               </button>
@@ -790,10 +814,6 @@ export default function App() {
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>
   );
 }

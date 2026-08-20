@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* ── Default Colors ── */
+  --color-bg: #141210;
+  --color-surface: #1C1812;
+  --color-surface-hi: #242017;
+  --color-border: #39311F;
+  --color-border-hi: #4E4327;
+  --color-gold: #C9A227;
+  --color-gold-bright: #E9CA73;
+  --color-text: #F1EAD9;
+  --color-text-muted: #9C9384;
+  --color-text-faint: #6E6656;
+  --color-accent-danger: #9C3F35;
+  --color-accent-success: #748A6C;
+
+  /* ── Default Fonts ── */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+}

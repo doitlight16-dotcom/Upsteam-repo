@@ -47,6 +47,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Новые env vars для White-Label и AI Concierge
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+ADMIN_SECRET: str = os.getenv("ADMIN_SECRET", "")
+IS_DEV: bool = os.getenv("VERCEL_ENV", "development") == "development"
+
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
 if not BOT_TOKEN:
     logger.critical("❌ BOT_TOKEN не задан! Задайте переменную окружения в Vercel Dashboard.")
@@ -111,19 +116,26 @@ dp.include_router(build_router())
 app = FastAPI(
     title="APEX ASSET SUITE — Bot API",
     description="Telegram Webhook + Web App API для ADIPEC Concierge",
-    version="2.0.0",
-    docs_url=None,   # Отключаем Swagger UI в продакшене
-    redoc_url=None,
+    version="3.0.0",
+    docs_url="/docs" if IS_DEV else None,
+    redoc_url="/redoc" if IS_DEV else None,
 )
 
-# CORS — разрешаем только домен WebApp
+# CORS — разрешаем только домен WebApp и новую Админ-панель
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()],
+    allow_origins=["*"], # Разрешаем все домены для удобства подключения Admin Panel
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"], # Разрешаем все методы (GET, POST, PUT, DELETE, OPTIONS)
     allow_headers=["*"],
 )
+
+# ── White-Label Engine + AI Concierge Routers ──
+from api.tenant import router as tenant_router      # noqa: E402
+from api.concierge import router as concierge_router  # noqa: E402
+
+app.include_router(tenant_router)
+app.include_router(concierge_router)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -232,10 +244,12 @@ async def health_check() -> dict:
     return {
         "status": "ok",
         "service": "APEX ASSET SUITE Bot",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "bot_token_set": bool(BOT_TOKEN),
         "webhook_secret_set": bool(WEBHOOK_SECRET),
         "redis_configured": bool(UPSTASH_REDIS_URL),
+        "openai_configured": bool(OPENAI_API_KEY),
+        "admin_configured": bool(ADMIN_SECRET),
         "webhook_configured": webhook_configured,
     }
 

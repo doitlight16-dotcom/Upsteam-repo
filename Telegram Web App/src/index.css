@@ -1,3 +1,74 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+/* ══════════════════════════════════════════════════
+   APEX ASSET SUITE — CSS Design Tokens
+   Dynamic White-Label via CSS Custom Properties
+   ══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ── Colors (overridden at runtime by TenantContext) ── */
+  --color-bg: #141210;
+  --color-surface: #1C1812;
+  --color-surface-hi: #242017;
+  --color-border: #39311F;
+  --color-border-hi: #4E4327;
+  --color-gold: #C9A227;
+  --color-gold-bright: #E9CA73;
+  --color-text: #F1EAD9;
+  --color-text-muted: #9C9384;
+  --color-text-faint: #6E6656;
+  --color-accent-danger: #9C3F35;
+  --color-accent-success: #748A6C;
+
+  /* ── Fonts (overridden at runtime by TenantContext) ── */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── Global Resets ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar hiding (Telegram Mini App) ── */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* ── Animation Keyframes ── */
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ── Selection ── */
+::selection {
+  background: var(--color-gold);
+  color: var(--color-bg);
+}
