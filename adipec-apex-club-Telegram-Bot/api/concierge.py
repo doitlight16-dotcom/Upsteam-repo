@@ -19,7 +19,7 @@ from .tenant import _load_tenant
 logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 MAX_HISTORY_MESSAGES: int = 20  # Cap conversation history sent to LLM
 
 
