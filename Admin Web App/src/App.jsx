@@ -278,7 +278,14 @@ export default function App() {
       if (res.ok) {
         setIsAuthenticated(true);
         setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        // Clear sensitive fields after successful publish
+        setAdminToken("");
+        setConfig((prev) => ({ ...prev, logo_url: null, banner_url: null }));
+        // Hide success badge after 6 seconds
+        setTimeout(() => {
+          setSaved(false);
+          setIsAuthenticated(false);
+        }, 6000);
         // Refresh iframe to load new settings from backend (timestamp forces a real reload)
         if (iframeRef.current) {
           iframeRef.current.src = `${MINI_APP_URL}?tenant=default&_t=${Date.now()}`;
@@ -412,36 +419,56 @@ export default function App() {
         {/* iPhone Mockup Frame */}
         <div
           className="relative rounded-[40px] border-[12px] border-neutral-800 shadow-2xl"
-          style={{ width: 390, height: 780, overflow: "hidden" }}
+          style={{ width: 390, height: 780, overflow: "hidden", background: "#000" }}
         >
-          {/* Status bar + Notch */}
+          {/* Status bar with Dynamic Island */}
           <div
-            className="absolute top-0 left-0 right-0 z-10 flex items-start justify-center"
-            style={{ height: 44, background: "#1a1a1a", borderRadius: "28px 28px 0 0" }}
+            className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center"
+            style={{
+              height: 54,
+              background: "#000",
+              paddingTop: 10,
+            }}
           >
+            {/* Dynamic Island pill */}
             <div
               style={{
-                width: 120,
-                height: 28,
-                background: "#111",
-                borderRadius: "0 0 20px 20px",
+                width: 126,
+                height: 34,
+                background: "#000",
+                borderRadius: 20,
+                border: "1.5px solid #1a1a1a",
+                boxShadow: "0 0 0 1px #222, 0 2px 12px rgba(0,0,0,0.9)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingLeft: 10,
+                paddingRight: 12,
               }}
-            />
+            >
+              {/* Camera dot */}
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1a1a1a", border: "1px solid #2a2a2a" }} />
+              {/* Face ID sensors */}
+              <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: "#1c1c1c" }} />
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#1a1a1a", border: "1px solid #2a2a2a" }} />
+              </div>
+            </div>
           </div>
 
-          {/* iframe — offset by status bar height so Mini App content starts below notch */}
+          {/* iframe — starts below Dynamic Island status bar */}
           <iframe
             ref={iframeRef}
             src={`${MINI_APP_URL}?tenant=default`}
             title="Preview"
             style={{
               position: "absolute",
-              top: 44,
+              top: 54,
               left: 0,
               right: 0,
               bottom: 0,
               width: "100%",
-              height: "calc(100% - 44px)",
+              height: "calc(100% - 54px)",
               border: "none",
               background: "#000",
             }}
