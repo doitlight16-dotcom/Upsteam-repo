@@ -279,8 +279,10 @@ export default function App() {
         setIsAuthenticated(true);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
-        // Refresh iframe to load new settings from backend
-        if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+        // Refresh iframe to load new settings from backend (timestamp forces a real reload)
+        if (iframeRef.current) {
+          iframeRef.current.src = `${MINI_APP_URL}?tenant=default&_t=${Date.now()}`;
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         alert(`Ошибка: ${err.detail || res.status}`);
@@ -341,7 +343,7 @@ export default function App() {
               label="Токен администратора (ADMIN_SECRET)"
               value={adminToken}
               onChange={setAdminToken}
-              placeholder="Вставьте ADMIN_SECRET из бэкенда"
+              placeholder="Вставьте ADMIN_SECRET"
             />
             {isAuthenticated && (
               <div className="flex items-center gap-1.5 mt-2" style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--color-accent-success)" }}>
@@ -406,17 +408,43 @@ export default function App() {
         <div className="absolute top-6 left-6 text-neutral-500 font-mono text-xs tracking-widest uppercase">
           Live Preview (Telegram Mini App)
         </div>
-        
+
         {/* iPhone Mockup Frame */}
-        <div className="relative rounded-[40px] border-[12px] border-neutral-800 overflow-hidden shadow-2xl" style={{ width: 390, height: 780 }}>
-          {/* Mock Notch */}
-          <div className="absolute top-0 inset-x-0 h-6 bg-neutral-800 flex justify-center z-10 rounded-b-xl w-32 mx-auto"></div>
-          
+        <div
+          className="relative rounded-[40px] border-[12px] border-neutral-800 shadow-2xl"
+          style={{ width: 390, height: 780, overflow: "hidden" }}
+        >
+          {/* Status bar + Notch */}
+          <div
+            className="absolute top-0 left-0 right-0 z-10 flex items-start justify-center"
+            style={{ height: 44, background: "#1a1a1a", borderRadius: "28px 28px 0 0" }}
+          >
+            <div
+              style={{
+                width: 120,
+                height: 28,
+                background: "#111",
+                borderRadius: "0 0 20px 20px",
+              }}
+            />
+          </div>
+
+          {/* iframe — offset by status bar height so Mini App content starts below notch */}
           <iframe
             ref={iframeRef}
             src={`${MINI_APP_URL}?tenant=default`}
-            className="w-full h-full bg-black border-none"
             title="Preview"
+            style={{
+              position: "absolute",
+              top: 44,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: "100%",
+              height: "calc(100% - 44px)",
+              border: "none",
+              background: "#000",
+            }}
           />
         </div>
         <div className="mt-8 text-neutral-500 text-sm max-w-sm text-center">
